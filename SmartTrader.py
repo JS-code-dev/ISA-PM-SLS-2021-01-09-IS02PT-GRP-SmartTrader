@@ -1,10 +1,26 @@
 import import_ipynb
-from Environment import *
+from SmartTraderLibrary import *
 import pandas as pd
 import numpy as np
 import sys, os
 import tkinter as tk
 from tkinter import filedialog
+
+# Environment parameters
+EnvPara = {
+    'tnx_cost':-0.01,
+    'funding_cost':-0.001,
+    'clip_rewards':False,
+    'debug':False,
+    'history_t':90
+}
+
+# Q Network parameters
+QPara = {
+    'input_size':91,
+    'hidden_size':100,
+    'output_size': len(act_dict)
+}
 
 # Set file directory path
 def setFilePath(initDir = os.curdir):
@@ -20,7 +36,7 @@ def printFirstLastofDF(df, n=5):
     print('...  ...  ...')
     print('...  ...  ...')
     print('...  ...  ...')
-    print(df.iloc[(-1*n):])
+    print(df.tail(n))
     print('')
 
 # Read and extract historical data
@@ -33,11 +49,20 @@ def inputHistoricalData(filepath):
     return data
 
 # Load model and intialize environment
-def loadModelandEnv(data):
-    Policy_Network = Q_Network()
-    chainer.serializers.load_hdf5("model.hdf5", Policy_Network)
-    env = Environment1(data)
-    return Policy_Network, env
+def loadPolicyNetwork(model):
+    Policy_Network = Q_Network(input_size=QPara['input_size'], hidden_size=QPara['hidden_size'], output_size=QPara['output_size'])
+    chainer.serializers.load_hdf5(model, Policy_Network)
+    return Policy_Network
+
+# Set up environment
+def setupEnv(data):
+    env = Environment1(data, tnx_cost=EnvPara['tnx_cost'],
+                   funding_cost=EnvPara['funding_cost'],
+                   clip_rewards=EnvPara['clip_rewards'],
+                   debug=EnvPara['debug'],
+                   history_t=EnvPara['history_t'])
+    env.reset()
+    return env
 
 # Prompt for user input, and process into dataframe
 def userInput():
@@ -62,13 +87,25 @@ def userInput():
 
     return input_data
 
-# Main fuction starts here
+####### Main fuction starts here #########
 filepath = setFilePath()
 data = inputHistoricalData(filepath)
-Policy_Network, env = loadModelandEnv(data)
+Policy_Network = loadPolicyNetwork("model.hdf5")
+env = setupEnv(data)
 
-plot_train_test(data)
-plot_train_test_by_q(test_env = env, Q = Policy_Network, algorithm_name = 'DQN')
+plot_train_test(test = data)
+
+train_env, test_env, \
+train_actions, train_rewards, train_invested_capital, train_position_value, train_profits, \
+test_actions, test_rewards, test_invested_capital, test_position_value, test_profits \
+= apply_trained_model(Policy_Network = Policy_Network, test_env = env)
+
+plot_train_test_by_q(algorithm_name="DQN",
+                     test_env=test_env,
+                     test_actions=test_actions,
+                     test_rewards=test_rewards,
+                     test_position_value=test_position_value,
+                     test_profits=test_profits)
 
 while(1):
     input_data = userInput()
@@ -91,6 +128,6 @@ while(1):
     next_state, reward, done = env.step(action)
 
     print('')
-    print('Action to take: ' + str(action))
+    print('Action to take: ' + str(act_dict[action]))
     print('Reward from taking action: ' + str(reward))
     print('Current total profits: ' + str(env.profits))
