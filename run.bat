@@ -1,0 +1,1 @@
+python SmartTrader.py
