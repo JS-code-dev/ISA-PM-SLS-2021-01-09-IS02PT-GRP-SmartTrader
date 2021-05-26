@@ -8,18 +8,11 @@ from tkinter import filedialog
 
 # Environment parameters
 EnvPara = {
-    'tnx_cost':-0.01,
-    'funding_cost':-0.001,
+    'tnx_cost':0,
+    'funding_cost':0,
     'clip_rewards':False,
     'debug':False,
     'history_t':90
-}
-
-# Q Network parameters
-QPara = {
-    'input_size':91,
-    'hidden_size':100,
-    'output_size': len(act_dict)
 }
 
 # Set file directory path
@@ -49,8 +42,8 @@ def inputHistoricalData(filepath):
     return data
 
 # Load model and intialize environment
-def loadPolicyNetwork(model):
-    Policy_Network = Q_Network(input_size=QPara['input_size'], hidden_size=QPara['hidden_size'], output_size=QPara['output_size'])
+def loadPolicyNetwork(model, env):
+    Policy_Network = Q_Network(input_size=env.feature_size, output_size=len(act_dict))
     chainer.serializers.load_hdf5(model, Policy_Network)
     return Policy_Network
 
@@ -90,8 +83,8 @@ def userInput():
 ####### Main fuction starts here #########
 filepath = setFilePath()
 data = inputHistoricalData(filepath)
-Policy_Network = loadPolicyNetwork("model.hdf5")
 env = setupEnv(data)
+Policy_Network = loadPolicyNetwork("model.hdf5", env)
 
 plot_train_test(test = data)
 
