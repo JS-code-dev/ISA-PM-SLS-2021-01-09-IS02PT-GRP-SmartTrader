@@ -1,1 +1,0 @@
-# ISA-PM-SLS-2021-01-09-IS02PT-GRP-SmartTrader
